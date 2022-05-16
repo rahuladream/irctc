@@ -1,6 +1,11 @@
+import logging
+from datetime import datetime
 import environ
 import os
 from pathlib import Path
+import pytz
+
+tz = pytz.timezone('Asia/Calcutta')
 
 env = environ.Env()
 
@@ -31,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'irctc.apps.train'
 ]
 
 MIDDLEWARE = [
@@ -67,6 +73,7 @@ WSGI_APPLICATION = 'irctc.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -99,7 +106,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Calcutta'
 
 USE_I18N = True
 
@@ -115,3 +122,51 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGGING_PATH = os.path.join(BASE_DIR, 'irctc/logs')
+
+class LocalTimeFormatter(logging.Formatter):
+    converter = lambda *args: datetime.now(tz).timetuple()
+
+# https://docs.djangoproject.com/en/1.9/ref/settings/#logging
+LOGGING = {
+    'version': 1,
+    # The version number of our log
+    'disable_existing_loggers': False,
+    # A handler for WARNING. It is basically writing the WARNING messages into a file called WARNING.log
+    'formatters': {
+        'verbose': {
+            '()': LocalTimeFormatter,
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'maxBytes': 100000,
+            'backupCount': 5,
+            'filename': os.path.join(LOGGING_PATH, 'debug.log'),
+            'formatter': 'verbose',
+        },
+    },
+    # A logger for WARNING which has a handler called 'file'. A logger can have multiple handler
+    'loggers': {
+       # notice the blank '', Usually you would put built in loggers like django or root here based on your needs
+        'django': {
+            'handlers': ['file'], #notice how file variable is called in handler which has been defined above
+            'level': 'WARNING',
+            'propagate': True,
+        },
+        'apps': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
